@@ -1,3 +1,3 @@
 # Watchdog
 
-A package to provide improved watchdog functionality.
+A package to provide watchdog functionality for containers.
