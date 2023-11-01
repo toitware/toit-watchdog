@@ -7,8 +7,8 @@ import system.services show ServiceSelector
 interface WatchdogService:
   static SELECTOR ::= ServiceSelector
       --uuid="d11a26d3-9552-46f0-8d52-3cb925f1b04c"
-      --major=0
-      --minor=1
+      --major=1
+      --minor=0
 
   create id/string -> int
   static CREATE-INDEX ::= 0

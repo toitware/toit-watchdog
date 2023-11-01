@@ -2,7 +2,7 @@
 
 A package to provide watchdog functionality for containers.
 
-Only works on an actual ESP.
+Only works on ESP32 devices, including variants such as the ESP32-S3.
 
 ## Usage
 
@@ -11,8 +11,7 @@ import the client in the applications that want to use it.
 
 ### Provider
 
-Either install the `src/provider.toit` as container directly (mainly
-useful with Artemis), or create a fresh provider container:
+Create a fresh provider container:
 
 ``` toit
 // In watchdog-provider.toit.

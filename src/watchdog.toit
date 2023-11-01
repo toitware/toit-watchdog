@@ -4,7 +4,7 @@
 
 import system.services show ServiceClient ServiceResourceProxy
 
-import .service
+import .api.service
 
 class WatchdogServiceClient extends ServiceClient:
   static SELECTOR ::= WatchdogService.SELECTOR
@@ -62,8 +62,8 @@ class Watchdog extends ServiceResourceProxy:
   Note that exiting the application without stopping the watchdog will
     eventually lead to a reboot.
 
-  If the watchdog was already started it will be restarted with the new
-    configuration.
+  If the watchdog was already started it will receive the new
+    configuration, but it will not be fed.
 
   The granularity of the system may be higher than the given $s. It
     might take a few seconds before a missing feed is detected and/or

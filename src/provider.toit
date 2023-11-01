@@ -64,20 +64,23 @@ class WatchdogServiceProvider extends ServiceProvider
       logger_.debug "starting system watchdog"
       esp32.watchdog-init --ms=GRANULARITY-MS
       system-watchdog-task_ = task::
-        while true:
-          too-late := false
-          dogs_.do --values: | dog/Watchdog |
-            if dog.is-too-late:
-              logger_.fatal "watchdog too late" --tags={ "id": dog.id }
-              too-late = true
+        try:
+          while true:
+            too-late := false
+            dogs_.do --values: | dog/Watchdog |
+              if dog.is-too-late:
+                logger_.fatal "watchdog too late" --tags={ "id": dog.id }
+                too-late = true
 
-          if too-late:
-            esp32.deep-sleep Duration.ZERO
-          else:
-            // Feed the system watchdog.
-            logger_.debug "feeding system watchdog"
-            mutex_.do: esp32.watchdog-reset
-            sleep --ms=1_000
+            if too-late:
+              esp32.deep-sleep Duration.ZERO
+            else:
+              // Feed the system watchdog.
+              logger_.debug "feeding system watchdog"
+              mutex_.do: esp32.watchdog-reset
+              sleep --ms=(GRANULARITY-MS / 2)
+        finally:
+          system-watchdog-task_ = null
 
   stop-system-watchdog-if-possible_:
     if not system-watchdog-task_: return
@@ -91,7 +94,6 @@ class WatchdogServiceProvider extends ServiceProvider
       esp32.watchdog-deinit
 
       system-watchdog-task_.cancel
-      system-watchdog-task_ = null
 
   remove-dog_ dog/Watchdog:
     logger_.debug "removing watchdog" --tags={ "id": dog.id }
@@ -128,18 +130,20 @@ class Watchdog extends ServiceResource:
     super provider client
 
   start s/int:
-    if not is-too-late:
+    if is-too-late: return
+    if state != STATE-STARTED:
       state = STATE-STARTED
+      // Only feed if the watchdog wasn't started yet.
       last-feeding-us = Time.monotonic-us
-      max-sleep-us = s * Duration.MICROSECONDS-PER-SECOND
+    max-sleep-us = s * Duration.MICROSECONDS-PER-SECOND
 
   feed -> none:
-    if state == STATE-STARTED:
-      now-us := Time.monotonic-us
-      if now-us - last-feeding-us > max-sleep-us:
-        state = STATE-TOO-LATE
-        return
-      last-feeding-us = Time.monotonic-us
+    if state != STATE-STARTED: return
+    now-us := Time.monotonic-us
+    if now-us - last-feeding-us > max-sleep-us:
+      state = STATE-TOO-LATE
+      return
+    last-feeding-us = Time.monotonic-us
 
   stop -> none:
     if not is-too-late:
