@@ -15,10 +15,11 @@ class WatchdogServiceProvider extends ServiceProvider
 
   dogs_/Map ::= {:}  // From string to Watchdog.
   system-watchdog-task_/Task? := null
-  logger_/log.Logger := (log.default.with-name "watchdog").with-level log.INFO-LEVEL
-  mutex_/monitor.Mutex := monitor.Mutex
+  logger_/log.Logger
+  mutex_/monitor.Mutex ::= monitor.Mutex
 
-  constructor:
+  constructor --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL):
+    logger_ = logger
     super "watchdog" --major=1 --minor=0
     provides WatchdogService.SELECTOR --handler=this
 
@@ -36,23 +37,27 @@ class WatchdogServiceProvider extends ServiceProvider
       else:
         dog = Watchdog this client id
       dogs_[id] = dog
+      logger_.info "created watchdog" --tags={ "id": id }
       return dog
 
     if index == WatchdogService.START-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.start (arguments[1] as int)
       start-system-watchdog-if-necessary_
+      logger_.info "started watchdog" --tags={ "id": dog.id }
       return null
 
     if index == WatchdogService.FEED-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.feed
+      logger_.info "fed watchdog" --tags={ "id": dog.id }
       return null
 
     if index == WatchdogService.STOP-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.stop
       stop-system-watchdog-if-possible_
+      logger_.info "stopped watchdog" --tags={ "id": dog.id }
       return null
 
     unreachable
@@ -90,13 +95,13 @@ class WatchdogServiceProvider extends ServiceProvider
 
     // Shutdown the system watchdog.
     mutex_.do:
-      logger_.debug "stopping system watchdog"
+      logger_.info "stopping system watchdog"
       esp32.watchdog-deinit
 
       system-watchdog-task_.cancel
 
   remove-dog_ dog/Watchdog:
-    logger_.debug "removing watchdog" --tags={ "id": dog.id }
+    logger_.info "removing watchdog" --tags={ "id": dog.id }
     dogs_.remove dog.id
 
 class Watchdog extends ServiceResource:
