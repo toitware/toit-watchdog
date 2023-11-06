@@ -85,7 +85,7 @@ class WatchdogServiceProvider extends ServiceProvider
   stop-system-watchdog-if-possible_:
     if not system-watchdog-task_: return
 
-    needs-watching := dogs_.any: | dog/Watchdog | not dog.is-stopped
+    needs-watching := dogs_.any: | _ dog/Watchdog | not dog.is-stopped
     if needs-watching: return
 
     // Shutdown the system watchdog.
