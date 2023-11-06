@@ -6,7 +6,7 @@ import esp32
 import log
 import monitor
 import system.services show ServiceProvider ServiceResource ServiceHandler
-import .service
+import .api.service
 
 class WatchdogServiceProvider extends ServiceProvider
   implements ServiceHandler:
