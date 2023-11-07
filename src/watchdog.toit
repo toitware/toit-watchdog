@@ -5,8 +5,8 @@
 /**
 A watchdog library.
 
-Using the watchdog requires to install the provider and then to
-  import the client in the applications that want to use it.
+Using the watchdog requires installing the provider and importing
+  the client in the applications that want to use it.
 
 # Provider
 
@@ -46,7 +46,7 @@ main:
   // Feed it:
   dog.feed
 
-  // Stop it, if not necessary:
+  // Stop it, if not needed anymore.
   dog.stop
 
   // When stopped, close it.
