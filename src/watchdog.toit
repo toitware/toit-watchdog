@@ -2,6 +2,58 @@
 // Use of this source code is governed by an MIT-style license that can be found
 // in the LICENSE file.
 
+/**
+A watchdog library.
+
+Using the watchdog requires installing the provider and importing
+  the client in the applications that want to use it.
+
+# Provider
+
+Create a fresh provider container:
+
+```
+// In watchdog-provider.toit.
+
+import watchdog.provider
+
+main:
+  (provider.WatchdogServiceProvider).install
+```
+
+Install it with Jaguar as follows
+
+``` bash
+jag container install watchdog watchdog-provider.toit
+```
+
+# Client
+
+Import `watchdog` and then use it as follows:
+
+```
+import watchdog show WatchdogServiceClient
+
+main:
+  client := WatchdogServiceClient
+  // Connect to the provider that has been started earlier.
+  client.open
+  dog := client.create "my-dog"
+
+  // Require a feeding every 60 seconds.
+  dog.start --s=60
+
+  // Feed it:
+  dog.feed
+
+  // Stop it, if not needed anymore.
+  dog.stop
+
+  // When stopped, close it.
+  dog.close
+```
+*/
+
 import system.services show ServiceClient ServiceResourceProxy
 
 import .api.service
