@@ -54,8 +54,7 @@ class WatchdogServiceProvider extends ServiceProvider
   constructor
       --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL)
       --hardware-watchdog/HardwareWatchdog = HardwareWatchdogEsp32
-      --granularity-ms/int = GRANULARITY-MS
-  :
+      --granularity-ms/int = GRANULARITY-MS:
     logger_ = logger
     hardware-watchdog_ = hardware-watchdog
     granularity-ms_ = granularity-ms
