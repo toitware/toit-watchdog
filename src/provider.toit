@@ -2,11 +2,42 @@
 // Use of this source code is governed by an MIT-style license that can be found
 // in the LICENSE file.
 
-import esp32
 import log
 import monitor
 import system.services show ServiceProvider ServiceResource ServiceHandler
 import .api.service
+import .esp32 show HardwareWatchdogEsp32
+
+interface HardwareWatchdog:
+  /**
+  Starts the hardware watchdog timer.
+
+  The watchdog will reset the system if it isn't fed within $ms milliseconds.
+  The hardware watchdog may have a coarser granularity than the given $ms.
+  */
+  start --ms/int
+
+  /**
+  Feeds the hardware watchdog.
+
+  # Aliases
+  - `kick`
+  - `reset`
+  */
+  feed -> none
+
+  /**
+  Stops the hardware watchdog.
+  */
+  stop -> none
+
+  /**
+  Reboots the system.
+
+  This is called if a watchdog isn't fed in time, but the system
+    watchdog still has time left.
+  */
+  reboot -> none
 
 class WatchdogServiceProvider extends ServiceProvider
   implements ServiceHandler:
@@ -14,12 +45,20 @@ class WatchdogServiceProvider extends ServiceProvider
   static GRANULARITY-MS ::= 2_000
 
   dogs_/Map ::= {:}  // From string to Watchdog.
-  system-watchdog-task_/Task? := null
+  hardware-watchdog_/HardwareWatchdog
+  hardware-watchdog-task_/Task? := null
   logger_/log.Logger
   mutex_/monitor.Mutex ::= monitor.Mutex
+  granularity-ms_/int
 
-  constructor --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL):
+  constructor
+      --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL)
+      --hardware-watchdog/HardwareWatchdog = HardwareWatchdogEsp32
+      --granularity-ms/int = GRANULARITY-MS
+  :
     logger_ = logger
+    hardware-watchdog_ = hardware-watchdog
+    granularity-ms_ = granularity-ms
     super "watchdog" --major=1 --minor=0
     provides WatchdogService.SELECTOR --handler=this
 
@@ -43,7 +82,7 @@ class WatchdogServiceProvider extends ServiceProvider
     if index == WatchdogService.START-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.start (arguments[1] as int)
-      start-system-watchdog-if-necessary_
+      start-hardware-watchdog-if-necessary_
       logger_.info "started watchdog" --tags={ "id": dog.id }
       return null
 
@@ -56,49 +95,52 @@ class WatchdogServiceProvider extends ServiceProvider
     if index == WatchdogService.STOP-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.stop
-      stop-system-watchdog-if-possible_
+      stop-hardware-watchdog-if-possible_
       logger_.info "stopped watchdog" --tags={ "id": dog.id }
       return null
 
     unreachable
 
-  start-system-watchdog-if-necessary_:
-    if system-watchdog-task_: return
+  start-hardware-watchdog-if-necessary_:
+    if hardware-watchdog-task_: return
 
     mutex_.do:
-      logger_.debug "starting system watchdog"
-      esp32.watchdog-init --ms=GRANULARITY-MS
-      system-watchdog-task_ = task::
+      logger_.debug "starting hardware watchdog"
+      hardware-watchdog_.start --ms=granularity-ms_
+      hardware-watchdog-task_ = task::
         try:
           while true:
             too-late := false
             dogs_.do --values: | dog/Watchdog |
               if dog.is-too-late:
-                logger_.fatal "watchdog too late" --tags={ "id": dog.id }
+                logger_.error "watchdog too late" --tags={ "id": dog.id }
                 too-late = true
 
             if too-late:
-              esp32.deep-sleep Duration.ZERO
+              // Feed the hardware watchdog one last time then request to reboot.
+              // This allows the system to clean up before rebooting.
+              mutex_.do: hardware-watchdog_.feed
+              hardware-watchdog_.reboot
             else:
-              // Feed the system watchdog.
-              logger_.debug "feeding system watchdog"
-              mutex_.do: esp32.watchdog-reset
-              sleep --ms=(GRANULARITY-MS / 2)
+              // Feed the hardware watchdog.
+              logger_.debug "feeding hardware watchdog"
+              mutex_.do: hardware-watchdog_.feed
+              sleep --ms=(granularity-ms_ / 2)
         finally:
-          system-watchdog-task_ = null
+          hardware-watchdog-task_ = null
 
-  stop-system-watchdog-if-possible_:
-    if not system-watchdog-task_: return
+  stop-hardware-watchdog-if-possible_:
+    if not hardware-watchdog-task_: return
 
     needs-watching := dogs_.any: | _ dog/Watchdog | not dog.is-stopped
     if needs-watching: return
 
-    // Shutdown the system watchdog.
+    // Shutdown the hardware watchdog.
     mutex_.do:
-      logger_.info "stopping system watchdog"
-      esp32.watchdog-deinit
+      logger_.info "stopping hardware watchdog"
+      hardware-watchdog_.stop
 
-      system-watchdog-task_.cancel
+      hardware-watchdog-task_.cancel
 
   remove-dog_ dog/Watchdog:
     logger_.info "removing watchdog" --tags={ "id": dog.id }
