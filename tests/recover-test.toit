@@ -8,10 +8,10 @@ import watchdog show WatchdogServiceClient
 import .util
 
 main:
-  run-test: |client ms hw-dog| test-recover client ms hw-dog
+  run-test: |client ms system-dog| test-recover client ms system-dog
 
 // If a watchdog gets lost/closed, another watchdog with the same name can take over.
-test-recover client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
+test-recover client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog:
   dog := client.create "toit.io/test/recover"
   dog.start --s=1
   // Simulate a crash/loss and just create a new dog with the same new name.
@@ -26,5 +26,5 @@ test-recover client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
   dog.stop
   dog.close
 
-  expect-not hw-dog.failed
-  expect-not hw-dog.reboot-initiated
+  expect-not system-dog.failed
+  expect-not system-dog.reboot-initiated

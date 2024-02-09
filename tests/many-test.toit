@@ -8,9 +8,9 @@ import watchdog show WatchdogServiceClient
 import .util
 
 main:
-  run-test: |client ms hw-dog| test-many client ms hw-dog
+  run-test: |client ms system-dog| test-many client ms system-dog
 
-test-many client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
+test-many client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog:
   dogs := List 20: client.create "toit.io/test/many/$it"
   dogs.do: it.start --s=1
   4.repeat:
@@ -19,5 +19,5 @@ test-many client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
   dogs.do: it.stop
   dogs.do: it.close
 
-  expect-not hw-dog.failed
-  expect-not hw-dog.reboot-initiated
+  expect-not system-dog.failed
+  expect-not system-dog.reboot-initiated

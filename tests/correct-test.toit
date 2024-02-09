@@ -8,9 +8,9 @@ import watchdog show WatchdogServiceClient
 import .util
 
 main:
-  run-test: |client ms hw-dog| test-correct-feeding client ms hw-dog
+  run-test: |client ms system-dog| test-correct-feeding client ms system-dog
 
-test-correct-feeding client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
+test-correct-feeding client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog:
   dog := client.create "toit.io/test/correct"
   dog.start --s=1
   4.repeat:
@@ -19,5 +19,5 @@ test-correct-feeding client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatc
   dog.stop
   dog.close
 
-  expect-not hw-dog.failed
-  expect-not hw-dog.reboot-initiated
+  expect-not system-dog.failed
+  expect-not system-dog.reboot-initiated

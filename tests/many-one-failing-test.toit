@@ -8,9 +8,9 @@ import watchdog show WatchdogServiceClient
 import .util
 
 main:
-  run-test: |client ms hw-dog| test-many-one-timeout client ms hw-dog
+  run-test: |client ms system-dog| test-many-one-timeout client ms system-dog
 
-test-many-one-timeout client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
+test-many-one-timeout client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog:
   dogs := List 20: client.create "toit.io/test/many-one-timeout/$it"
   failing-dog := client.create "toit.io/test/many-one-timeout/failing"
   dogs.do: it.start --s=1
@@ -23,6 +23,6 @@ test-many-one-timeout client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWat
   failing-dog.stop
   failing-dog.close
 
-  expect hw-dog.failed
-  expect hw-dog.reboot-initiated
+  expect system-dog.failed
+  expect system-dog.reboot-initiated
 

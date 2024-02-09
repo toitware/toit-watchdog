@@ -6,9 +6,9 @@ import log
 import monitor
 import system.services show ServiceProvider ServiceResource ServiceHandler
 import .api.service
-import .esp32 show HardwareWatchdogEsp32
+import .esp32 show SystemWatchdogEsp32
 
-interface HardwareWatchdog:
+interface SystemWatchdog:
   /**
   Starts the hardware watchdog timer.
 
@@ -45,18 +45,18 @@ class WatchdogServiceProvider extends ServiceProvider
   static GRANULARITY-MS ::= 2_000
 
   dogs_/Map ::= {:}  // From string to Watchdog.
-  hardware-watchdog_/HardwareWatchdog
-  hardware-watchdog-task_/Task? := null
+  system-watchdog_/SystemWatchdog
+  system-watchdog-task_/Task? := null
   logger_/log.Logger
   mutex_/monitor.Mutex ::= monitor.Mutex
   granularity-ms_/int
 
   constructor
       --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL)
-      --hardware-watchdog/HardwareWatchdog = HardwareWatchdogEsp32
+      --system-watchdog/SystemWatchdog = SystemWatchdogEsp32
       --granularity-ms/int = GRANULARITY-MS:
     logger_ = logger
-    hardware-watchdog_ = hardware-watchdog
+    system-watchdog_ = system-watchdog
     granularity-ms_ = granularity-ms
     super "watchdog" --major=1 --minor=0
     provides WatchdogService.SELECTOR --handler=this
@@ -81,7 +81,7 @@ class WatchdogServiceProvider extends ServiceProvider
     if index == WatchdogService.START-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.start (arguments[1] as int)
-      start-hardware-watchdog-if-necessary_
+      start-system-watchdog-if-necessary_
       logger_.info "started watchdog" --tags={ "id": dog.id }
       return null
 
@@ -94,19 +94,19 @@ class WatchdogServiceProvider extends ServiceProvider
     if index == WatchdogService.STOP-INDEX:
       dog := (this.resource client arguments[0]) as Watchdog
       dog.stop
-      stop-hardware-watchdog-if-possible_
+      stop-system-watchdog-if-possible_
       logger_.info "stopped watchdog" --tags={ "id": dog.id }
       return null
 
     unreachable
 
-  start-hardware-watchdog-if-necessary_:
-    if hardware-watchdog-task_: return
+  start-system-watchdog-if-necessary_:
+    if system-watchdog-task_: return
 
     mutex_.do:
       logger_.debug "starting hardware watchdog"
-      hardware-watchdog_.start --ms=granularity-ms_
-      hardware-watchdog-task_ = task::
+      system-watchdog_.start --ms=granularity-ms_
+      system-watchdog-task_ = task::
         try:
           while true:
             too-late := false
@@ -118,18 +118,18 @@ class WatchdogServiceProvider extends ServiceProvider
             if too-late:
               // Feed the hardware watchdog one last time then request to reboot.
               // This allows the system to clean up before rebooting.
-              mutex_.do: hardware-watchdog_.feed
-              hardware-watchdog_.reboot
+              mutex_.do: system-watchdog_.feed
+              system-watchdog_.reboot
             else:
               // Feed the hardware watchdog.
               logger_.debug "feeding hardware watchdog"
-              mutex_.do: hardware-watchdog_.feed
+              mutex_.do: system-watchdog_.feed
               sleep --ms=(granularity-ms_ / 2)
         finally:
-          hardware-watchdog-task_ = null
+          system-watchdog-task_ = null
 
-  stop-hardware-watchdog-if-possible_:
-    if not hardware-watchdog-task_: return
+  stop-system-watchdog-if-possible_:
+    if not system-watchdog-task_: return
 
     needs-watching := dogs_.any: | _ dog/Watchdog | not dog.is-stopped
     if needs-watching: return
@@ -137,9 +137,9 @@ class WatchdogServiceProvider extends ServiceProvider
     // Shutdown the hardware watchdog.
     mutex_.do:
       logger_.info "stopping hardware watchdog"
-      hardware-watchdog_.stop
+      system-watchdog_.stop
 
-      hardware-watchdog-task_.cancel
+      system-watchdog-task_.cancel
 
   remove-dog_ dog/Watchdog:
     logger_.info "removing watchdog" --tags={ "id": dog.id }

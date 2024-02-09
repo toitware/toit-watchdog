@@ -4,9 +4,9 @@
 
 import esp32
 
-import .provider show HardwareWatchdog
+import .provider show SystemWatchdog
 
-class HardwareWatchdogEsp32 implements HardwareWatchdog:
+class SystemWatchdogEsp32 implements SystemWatchdog:
   start --ms/int:
     esp32.watchdog-init --ms=ms
 

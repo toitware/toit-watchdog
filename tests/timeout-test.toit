@@ -8,12 +8,12 @@ import watchdog show WatchdogServiceClient
 import .util
 
 main:
-  run-test: |client ms hw-dog| test-timeout client ms hw-dog
+  run-test: |client ms system-dog| test-timeout client ms system-dog
 
-test-timeout client/WatchdogServiceClient ms/int hw-dog/FakeHardwareWatchdog:
+test-timeout client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog:
   dog := client.create "toit.io/test/timeout"
   dog.start --s=1
-  hw-dog.signal.wait: hw-dog.failed
-  hw-dog.signal.wait: hw-dog.reboot-initiated
+  system-dog.signal.wait: system-dog.failed
+  system-dog.signal.wait: system-dog.reboot-initiated
   dog.stop
   dog.close

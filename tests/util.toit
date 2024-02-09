@@ -6,7 +6,7 @@ import monitor
 import watchdog.provider
 import watchdog show WatchdogServiceClient
 
-class FakeHardwareWatchdog implements provider.HardwareWatchdog:
+class FakeSystemWatchdog implements provider.SystemWatchdog:
   // For simplicity we use the signal for internal and external
   // notifications.
   signal/monitor.Signal := monitor.Signal
@@ -41,15 +41,15 @@ class FakeHardwareWatchdog implements provider.HardwareWatchdog:
 
 run-test [block]:
   granularity-ms := 500
-  fake-hardware-dog := FakeHardwareWatchdog
+  fake-system-dog := FakeSystemWatchdog
   service-provider := provider.WatchdogServiceProvider
       --granularity-ms=granularity-ms
-      --hardware-watchdog=fake-hardware-dog
+      --system-watchdog=fake-system-dog
   service-provider.install
   client := (WatchdogServiceClient).open
   try:
     with-timeout --ms=5_000:
-      block.call client granularity-ms fake-hardware-dog
+      block.call client granularity-ms fake-system-dog
   finally:
     client.close
     service-provider.uninstall
