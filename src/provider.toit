@@ -116,13 +116,13 @@ class WatchdogServiceProvider extends ServiceProvider
                 too-late = true
 
             if too-late:
-              // Feed the hardware watchdog one last time then request to reboot.
+              // Feed the system watchdog one last time then request to reboot.
               // This allows the system to clean up before rebooting.
               mutex_.do: system-watchdog_.feed
               system-watchdog_.reboot
             else:
               // Feed the system watchdog.
-              logger_.debug "feeding hardware watchdog"
+              logger_.debug "feeding system watchdog"
               mutex_.do: system-watchdog_.feed
               sleep --ms=(granularity-ms_ / 2)
         finally:
