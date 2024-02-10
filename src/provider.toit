@@ -2,11 +2,42 @@
 // Use of this source code is governed by an MIT-style license that can be found
 // in the LICENSE file.
 
-import esp32
 import log
 import monitor
 import system.services show ServiceProvider ServiceResource ServiceHandler
 import .api.service
+import .esp32 show SystemWatchdogEsp32
+
+interface SystemWatchdog:
+  /**
+  Starts the system watchdog timer.
+
+  The watchdog will reset the system if it isn't fed within $ms milliseconds.
+  The system watchdog may have a coarser granularity than the given $ms.
+  */
+  start --ms/int
+
+  /**
+  Feeds the system watchdog.
+
+  # Aliases
+  - `kick`
+  - `reset`
+  */
+  feed -> none
+
+  /**
+  Stops the system watchdog.
+  */
+  stop -> none
+
+  /**
+  Reboots the system.
+
+  This is called if a watchdog isn't fed in time, but the system
+    watchdog still has time left.
+  */
+  reboot -> none
 
 class WatchdogServiceProvider extends ServiceProvider
   implements ServiceHandler:
@@ -14,12 +45,19 @@ class WatchdogServiceProvider extends ServiceProvider
   static GRANULARITY-MS ::= 2_000
 
   dogs_/Map ::= {:}  // From string to Watchdog.
+  system-watchdog_/SystemWatchdog
   system-watchdog-task_/Task? := null
   logger_/log.Logger
   mutex_/monitor.Mutex ::= monitor.Mutex
+  granularity-ms_/int
 
-  constructor --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL):
+  constructor
+      --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL)
+      --system-watchdog/SystemWatchdog = SystemWatchdogEsp32
+      --granularity-ms/int = GRANULARITY-MS:
     logger_ = logger
+    system-watchdog_ = system-watchdog
+    granularity-ms_ = granularity-ms
     super "watchdog" --major=1 --minor=0
     provides WatchdogService.SELECTOR --handler=this
 
@@ -67,23 +105,26 @@ class WatchdogServiceProvider extends ServiceProvider
 
     mutex_.do:
       logger_.debug "starting system watchdog"
-      esp32.watchdog-init --ms=GRANULARITY-MS
+      system-watchdog_.start --ms=granularity-ms_
       system-watchdog-task_ = task::
         try:
           while true:
             too-late := false
             dogs_.do --values: | dog/Watchdog |
               if dog.is-too-late:
-                logger_.fatal "watchdog too late" --tags={ "id": dog.id }
+                logger_.error "watchdog too late" --tags={ "id": dog.id }
                 too-late = true
 
             if too-late:
-              esp32.deep-sleep Duration.ZERO
+              // Feed the system watchdog one last time then request to reboot.
+              // This allows the system to clean up before rebooting.
+              mutex_.do: system-watchdog_.feed
+              system-watchdog_.reboot
             else:
               // Feed the system watchdog.
               logger_.debug "feeding system watchdog"
-              mutex_.do: esp32.watchdog-reset
-              sleep --ms=(GRANULARITY-MS / 2)
+              mutex_.do: system-watchdog_.feed
+              sleep --ms=(granularity-ms_ / 2)
         finally:
           system-watchdog-task_ = null
 
@@ -96,7 +137,7 @@ class WatchdogServiceProvider extends ServiceProvider
     // Shutdown the system watchdog.
     mutex_.do:
       logger_.info "stopping system watchdog"
-      esp32.watchdog-deinit
+      system-watchdog_.stop
 
       system-watchdog-task_.cancel
 
