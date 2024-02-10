@@ -10,15 +10,15 @@ import .esp32 show SystemWatchdogEsp32
 
 interface SystemWatchdog:
   /**
-  Starts the hardware watchdog timer.
+  Starts the system watchdog timer.
 
   The watchdog will reset the system if it isn't fed within $ms milliseconds.
-  The hardware watchdog may have a coarser granularity than the given $ms.
+  The system watchdog may have a coarser granularity than the given $ms.
   */
   start --ms/int
 
   /**
-  Feeds the hardware watchdog.
+  Feeds the system watchdog.
 
   # Aliases
   - `kick`
@@ -27,7 +27,7 @@ interface SystemWatchdog:
   feed -> none
 
   /**
-  Stops the hardware watchdog.
+  Stops the system watchdog.
   */
   stop -> none
 
@@ -104,7 +104,7 @@ class WatchdogServiceProvider extends ServiceProvider
     if system-watchdog-task_: return
 
     mutex_.do:
-      logger_.debug "starting hardware watchdog"
+      logger_.debug "starting system watchdog"
       system-watchdog_.start --ms=granularity-ms_
       system-watchdog-task_ = task::
         try:
@@ -121,7 +121,7 @@ class WatchdogServiceProvider extends ServiceProvider
               mutex_.do: system-watchdog_.feed
               system-watchdog_.reboot
             else:
-              // Feed the hardware watchdog.
+              // Feed the system watchdog.
               logger_.debug "feeding hardware watchdog"
               mutex_.do: system-watchdog_.feed
               sleep --ms=(granularity-ms_ / 2)
@@ -134,9 +134,9 @@ class WatchdogServiceProvider extends ServiceProvider
     needs-watching := dogs_.any: | _ dog/Watchdog | not dog.is-stopped
     if needs-watching: return
 
-    // Shutdown the hardware watchdog.
+    // Shutdown the system watchdog.
     mutex_.do:
-      logger_.info "stopping hardware watchdog"
+      logger_.info "stopping system watchdog"
       system-watchdog_.stop
 
       system-watchdog-task_.cancel
