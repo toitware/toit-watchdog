@@ -120,6 +120,9 @@ class WatchdogServiceProvider extends ServiceProvider
               // This allows the system to clean up before rebooting.
               mutex_.do: system-watchdog_.feed
               system-watchdog_.reboot
+              // In case the 'reboot' calls returns, break out of the
+              // loop. No need to look at the dogs again.
+              break
             else:
               // Feed the system watchdog.
               logger_.debug "feeding system watchdog"
