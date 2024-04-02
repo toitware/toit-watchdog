@@ -103,6 +103,7 @@ A watchdog.
 Requires to be fed ($feed) in time to ensure that the system doesn't reboot.
 */
 class Watchdog extends ServiceResourceProxy:
+  is-stopped_/bool := true
 
   constructor.private_ client/ServiceClient handle/int:
     super client handle
@@ -122,6 +123,7 @@ class Watchdog extends ServiceResourceProxy:
     reacted upon.
   */
   start --s/int -> none:
+    is-stopped_ = false
     client := (client_ as WatchdogServiceClient)
     client.start_ handle_ s
 
@@ -140,5 +142,14 @@ class Watchdog extends ServiceResourceProxy:
   Does nothing if the watchdog is not started.
   */
   stop -> none:
+    is-stopped_ = true
     client := (client_ as WatchdogServiceClient)
     client.stop_ handle_
+
+  /**
+  See $super.
+  */
+  close -> none:
+    super
+    if not is-stopped_:
+      throw "WATCHDOG_NOT_STOPPED"
