@@ -147,7 +147,7 @@ class Watchdog extends ServiceResourceProxy:
     client.stop_ handle_
 
   /**
-  See $super
+  See $super.
   */
   close -> none:
     super

@@ -8,11 +8,8 @@ import watchdog show WatchdogServiceClient
 import .util
 
 main:
-  run-test: |client ms system-dog| test-recover client ms system-dog
-
-// If a watchdog gets lost/closed, another watchdog with the same name can take over.
-test-recover client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog:
-  dog := client.create "toit.io/test/throw-close"
-  dog.start --s=1
-  expect-throw "WATCHDOG_NOT_STOPPED":
-    dog.close
+  run-test: | client/WatchdogServiceClient ms/int system-dog/FakeSystemWatchdog |
+    dog := client.create "toit.io/test/throw-close"
+    dog.start --s=1
+    expect-throw "WATCHDOG_NOT_STOPPED":
+      dog.close
