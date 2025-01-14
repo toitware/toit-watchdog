@@ -123,6 +123,7 @@ class Watchdog extends ServiceResourceProxy:
     reacted upon.
   */
   start --s/int -> none:
+    if is-closed: throw "ALREADY_CLOSED"
     is-stopped_ = false
     client := (client_ as WatchdogServiceClient)
     client.start_ handle_ s
@@ -133,6 +134,7 @@ class Watchdog extends ServiceResourceProxy:
   Does nothing if the watchdog is not started.
   */
   feed -> none:
+    if is-closed: throw "ALREADY_CLOSED"
     client := (client_ as WatchdogServiceClient)
     client.feed_ handle_
 
@@ -142,6 +144,7 @@ class Watchdog extends ServiceResourceProxy:
   Does nothing if the watchdog is not started.
   */
   stop -> none:
+    if is-closed: throw "ALREADY_CLOSED"
     is-stopped_ = true
     client := (client_ as WatchdogServiceClient)
     client.stop_ handle_
@@ -152,4 +155,8 @@ class Watchdog extends ServiceResourceProxy:
   close -> none:
     super
     if not is-stopped_:
-      throw "WATCHDOG_NOT_STOPPED"
+      // Produce a stack trace to draw attention to the
+      // fact that a closed, non-stopped watchdog will
+      // eventually lead to problems, because it cannot
+      // be fed anymore.
+      catch --trace: throw "WATCHDOG_NOT_STOPPED"
