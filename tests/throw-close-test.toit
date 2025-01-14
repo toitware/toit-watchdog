@@ -18,6 +18,9 @@ main:
     expect-equals 0 service.traces.size
     dog.close
     expect-equals 1 service.traces.size
+    dog.close
+    dog.close
+    expect-equals 2 service.traces.size
   service.uninstall
 
 class TraceServiceProvider extends ServiceProvider
