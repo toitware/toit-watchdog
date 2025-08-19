@@ -2,4 +2,4 @@ name: watchdog
 description: Watchdog support for containers.
 
 environment:
-  sdk: ^2.0.0-alpha.118
+  sdk: ^2.0.0-alpha.180
