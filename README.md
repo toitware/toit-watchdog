@@ -2,7 +2,7 @@
 
 A package to provide watchdog functionality for containers.
 
-Only works on ESP32 devices, including variants such as the ESP32-S3.
+Works on ESP32 devices, the EC618, and the RP2350.
 
 ## Usage
 

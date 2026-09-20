@@ -6,7 +6,7 @@ import log
 import monitor
 import system.services show ServiceProvider ServiceResource ServiceHandler
 import .api.service
-import .esp32 show SystemWatchdogEsp32
+import .system show SystemWatchdogEmbedded
 
 interface SystemWatchdog:
   /**
@@ -53,7 +53,7 @@ class WatchdogServiceProvider extends ServiceProvider
 
   constructor
       --logger/log.Logger=((log.default.with-name "watchdog").with-level log.ERROR-LEVEL)
-      --system-watchdog/SystemWatchdog = SystemWatchdogEsp32
+      --system-watchdog/SystemWatchdog = SystemWatchdogEmbedded
       --granularity-ms/int = GRANULARITY-MS:
     logger_ = logger
     system-watchdog_ = system-watchdog
