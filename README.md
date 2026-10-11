@@ -53,3 +53,24 @@ main:
   // When stopped, close it.
   dog.close
 ```
+
+## EC618
+
+The default provider uses the SDK's `system.watchdog` API on EC618. Use an
+SDK and firmware that include this API; the package's declared alpha.200
+minimum must include it before this change can be released.
+
+The EC618 provider accepts `--granularity-ms` from 1 through 60000 and rounds
+up to whole seconds. The default 2000 ms is supported. Individual clients
+can request longer timeouts; the provider checks their deadlines while
+feeding the system watchdog. The SDK's watchdog task continues timing
+during light sleep and runs independently of the Toit scheduler. Deep sleep
+ends monitoring and waking starts a fresh boot.
+
+Use one provider per device. Code in other containers, including test agents,
+that feeds or reconfigures `system.watchdog` or `ec618.watchdog` operates on
+the same watchdog and can interfere with monitoring.
+
+See [the EC618 hardware tests](tests/ec618/README.md) for reset, cross-container,
+and stop/restart qualification. Ordinary host tests use a test backend and do
+not verify the native EC618 watchdog.
