@@ -10,12 +10,15 @@ Compile `hardware.toit` from this directory with the matching SDK:
 ```sh
 toit compile -O2 -s -o hardware.snapshot hardware.toit
 toit tool snapshot-to-image --format=binary -m32 -o hardware.image hardware.snapshot
-python3 run-hardware.py --port /dev/serial/by-id/VERIFIED_DEVICE --image hardware.image
+toit pkg install --project-root runner
+toit run runner/run-hardware.toit -- --port /dev/serial/by-id/VERIFIED_DEVICE --image hardware.image
 ```
 
 Use the actual persistent serial path identifying the EC618; a by-path link
 may be needed for adapters without unique serial numbers. The agent must be
-listening at 115200 baud. The Python runner requires `pyserial`.
+listening at 115200 baud. The runner uses Toit's `uart.HostPort` and the `host`
+package for reading the image. Its separate package has no watchdog dependency,
+so runner tests can execute before an SDK with the shared watchdog API is released.
 
 The phases cover timeout boundaries, feeding and stopping, clients in separate
 containers, stop/restart, an armed client's exit, idle and CPU-busy expiry,
@@ -47,6 +50,7 @@ Only the runner should own the serial port, and no other watchdog provider
 should run during the test. Acquire the test rig's normal exclusive lock if
 it is shared with other runners.
 
-Run `python3 test-runner.py` without hardware to check that incomplete or
-contradictory serial traces cannot produce a successful verdict. These checks
-use only the Python standard library.
+Run `toit run runner/link-test.toit` without hardware to check that incomplete or
+contradictory serial traces cannot produce a successful verdict. Deterministic
+virtual-clock tests also check feed suppression, stopped-phase lease renewal,
+trial-slot refusal, upload chunking, byte order and a known CRC-32 vector.

@@ -45,8 +45,11 @@ main args:
       backend.reboot
       throw "WATCHDOG FAILED TO REBOOT"
     else if mode == "bounds":
-      [-1, 0, 60_001, 0x7fff_ffff].do: |ms/int|
+      [-1, 0, 60_001].do: |ms/int|
+        print "WATCHDOG BOUND ms=$ms"
         expect-equals "INVALID_ARGUMENT" (catch: backend.start --ms=ms)
+      // This exceeds the 32-bit VM's small-integer primitive argument range.
+      expect-equals "OUT_OF_RANGE" (catch: backend.start --ms=0x7fff_ffff)
       [1, 999, 1000, 1001, 60_000].do: |ms/int|
         backend.start --ms=ms
         backend.feed

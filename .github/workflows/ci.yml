@@ -29,7 +29,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - run: python tests/ec618/test-runner.py
+      - uses: toitlang/action-setup@v1
+        with:
+          toit-version: latest
+      - run: toit pkg install --project-root tests/ec618/runner
+      - run: toit analyze tests/ec618/runner/run-hardware.toit
+      - run: toit run tests/ec618/runner/link-test.toit
 
   build:
     strategy:
